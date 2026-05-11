@@ -84,6 +84,7 @@ mount -t sysfs none /sys
 mount -t devtmpfs none /dev 2>/dev/null || /bin/busybox mdev -s
 mount -t tmpfs none /tmp
 chmod 1777 /tmp
+export PATH=/usr/bin:/bin:/sbin:/usr/sbin
 
 # Cargar módulos crypto vulnerables si están como módulos
 /bin/busybox modprobe algif_aead 2>/dev/null || true
@@ -105,6 +106,76 @@ INITEOF
 chmod +x "$INITRAMFS_DIR/init"
 
 echo -e "${CYAN}[5/5] Empaquetando initramfs...${NC}"
+# Crear /usr/bin/su real setuid-root para el PoC
+SUBIN="$(command -v su || true)"
+if [ -n "$SUBIN" ]; then
+  mkdir -p "$INITRAMFS_DIR/usr/bin"
+  cp -L "$SUBIN" "$INITRAMFS_DIR/usr/bin/su"
+  chown 0:0 "$INITRAMFS_DIR/usr/bin/su" 2>/dev/null || true
+  chmod 4755 "$INITRAMFS_DIR/usr/bin/su"
+
+  # Copiar librerías dinámicas requeridas por su
+  ldd "$SUBIN" | awk '/=> \// {print $3} /^\// {print $1}' | while read -r lib; do
+    dest="$INITRAMFS_DIR$lib"
+    mkdir -p "$(dirname "$dest")"
+    cp -L "$lib" "$dest"
+  done
+
+  # Copiar dynamic loader
+  ldd "$SUBIN" | grep -o '/lib[^ ]*/ld-linux[^ ]*' | while read -r ld; do
+    dest="$INITRAMFS_DIR$ld"
+    mkdir -p "$(dirname "$dest")"
+    cp -L "$ld" "$dest"
+  done
+
+  # Copiar PAM básico para que su pueda iniciar
+  mkdir -p "$INITRAMFS_DIR/etc/pam.d" "$INITRAMFS_DIR/lib/x86_64-linux-gnu/security"
+  cp -a /etc/pam.d/su "$INITRAMFS_DIR/etc/pam.d/su" 2>/dev/null || true
+  cp -a /etc/pam.d/common-* "$INITRAMFS_DIR/etc/pam.d/" 2>/dev/null || true
+  cp -a /lib/x86_64-linux-gnu/security/*.so "$INITRAMFS_DIR/lib/x86_64-linux-gnu/security/" 2>/dev/null || true
+fi
+
+# Copiar exploit para Hito 2 dentro de la VM
+if [ -f "$WORKSPACE_ROOT/exploit/copy_fail_exp.py" ]; then
+  cp "$WORKSPACE_ROOT/exploit/copy_fail_exp.py" "$INITRAMFS_DIR/home/student/copy_fail_exp.py"
+  chmod 755 "$INITRAMFS_DIR/home/student/copy_fail_exp.py"
+  chown 1001:1001 "$INITRAMFS_DIR/home/student/copy_fail_exp.py" 2>/dev/null || true
+fi
+
+# Copiar Python 3 para ejecutar el PoC dentro de la VM
+PYBIN="$(command -v python3 || true)"
+if [ -n "$PYBIN" ]; then
+  mkdir -p "$INITRAMFS_DIR/usr/bin" "$INITRAMFS_DIR/usr/lib" "$INITRAMFS_DIR/lib" "$INITRAMFS_DIR/lib64"
+
+  cp "$PYBIN" "$INITRAMFS_DIR/usr/bin/python3"
+  ln -sf /usr/bin/python3 "$INITRAMFS_DIR/bin/python3"
+
+  # Copiar librerías dinámicas requeridas por python3
+  ldd "$PYBIN" | awk '/=> \// {print $3} /^\// {print $1}' | while read -r lib; do
+    dest="$INITRAMFS_DIR$lib"
+    mkdir -p "$(dirname "$dest")"
+    cp -L "$lib" "$dest"
+  done
+
+  # Copiar el dynamic loader si aparece en ldd
+  ldd "$PYBIN" | grep -o '/lib[^ ]*/ld-linux[^ ]*' | while read -r ld; do
+    dest="$INITRAMFS_DIR$ld"
+    mkdir -p "$(dirname "$dest")"
+    cp -L "$ld" "$dest"
+  done
+
+  # Copiar stdlib de Python, necesaria para socket, zlib, os, etc.
+  PYVER="$($PYBIN - <<'PYV'
+import sys
+print(f"python{sys.version_info.major}.{sys.version_info.minor}")
+PYV
+)"
+  if [ -d "/usr/lib/$PYVER" ]; then
+    mkdir -p "$INITRAMFS_DIR/usr/lib"
+    cp -a "/usr/lib/$PYVER" "$INITRAMFS_DIR/usr/lib/"
+  fi
+fi
+
 cd "$INITRAMFS_DIR"
 find . | cpio -o -H newc 2>/dev/null | gzip > "$BUILD_DIR/initramfs.cpio.gz"
 
