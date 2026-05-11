@@ -83,6 +83,7 @@ mount -t proc none /proc
 mount -t sysfs none /sys
 mount -t devtmpfs none /dev 2>/dev/null || /bin/busybox mdev -s
 mount -t tmpfs none /tmp
+chmod 1777 /tmp
 
 # Cargar módulos crypto vulnerables si están como módulos
 /bin/busybox modprobe algif_aead 2>/dev/null || true

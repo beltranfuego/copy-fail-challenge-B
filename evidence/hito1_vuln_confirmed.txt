@@ -1,0 +1,32 @@
+=== HITO 1: KERNEL VULNERABLE CONFIRMADO ===
+Fecha: Mon May 11 13:18:40 UTC 2026
+Hostname: copy-fail-ARTHUR-BELTRAN
+Kernel: 6.12.0
+Identidad: uid=1001(student) gid=1001(student) groups=1001(student)
+Usuario: student
+
+Config crypto del kernel:
+CONFIG_IKCONFIG=y
+CONFIG_IKCONFIG_PROC=y
+CONFIG_CRYPTO_AEAD=y
+CONFIG_CRYPTO_AEAD2=y
+CONFIG_CRYPTO_AUTHENC=y
+CONFIG_CRYPTO_USER_API=y
+# CONFIG_CRYPTO_USER_API_HASH is not set
+CONFIG_CRYPTO_USER_API_SKCIPHER=y
+# CONFIG_CRYPTO_USER_API_RNG is not set
+CONFIG_CRYPTO_USER_API_AEAD=y
+CONFIG_CRYPTO_USER_API_ENABLE_OBSOLETE=y
+
+Crypto disponible en /proc/crypto:
+name         : aes
+driver       : aes-generic
+name         : sha256
+driver       : sha256-generic
+
+Nota técnica:
+CONFIG_CRYPTO_AUTHENC compila authenc.o y authencesn.o según crypto/Makefile.
+El soporte AF_ALG/AEAD está built-in, por eso no aparece como módulo en lsmod.
+
+Módulos relacionados con alg:
+(no aparece como módulo; soporte compilado built-in)
