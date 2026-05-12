@@ -1,0 +1,20 @@
+=== HITO 4: PARCHE PERMANENTE APLICADO ===
+Fecha: Tue May 12 23:47:49 UTC 2026
+Hostname: copy-fail-ARTHUR-BELTRAN
+Kernel: 6.12.0-dirty
+Identidad final: uid=1001(student) gid=1001(student) groups=1001(stu)
+Usuario final: student
+
+=== PRUEBA DEL EXPLOIT POST-PARCHE ===
+Se ejecuto python3 /home/student/copy_fail_exp.py.
+Resultado observado: su: Module is unknown
+El usuario NO obtuvo root.
+
+=== ESTADO DEL EXPLOIT ===
+-rwxr-xr-x    1 student  student        758 May 12 23:47 /home/studey
+
+=== ESTADO DE /usr/bin/su ===
+-rwsr-xr-x    1 root     root         55680 May 12 23:47 /usr/bin/su
+
+=== RESULTADO ===
+El exploit quedo neutralizado por el parche permanente en crypto/alg.
