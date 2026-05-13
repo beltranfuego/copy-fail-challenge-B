@@ -10,6 +10,10 @@ y dependencias Ubuntu 24.04 corregidas.
 
 ---
 
+
+![alt text](image.png)
+![alt text](image-1.png)
+
 ## Inicio rápido para el estudiante
 
 1. Abre un Codespace desde este repo.
